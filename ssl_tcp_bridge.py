@@ -45,10 +45,18 @@ else:
 #From interested client
 LocalHost.bind(LocalServer)
 LocalHost.listen(MAX_CONNECTIONS)
+LocalHost.setblocking(0)
 print('Waiting for a connection to the local sever')
-ConnInterestedClient, InterestedClientAddress = LocalHost.accept()
+while True:
+	try:
+		ConnInterestedClient, InterestedClientAddress = LocalHost.accept()
+		print ('Connection from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
+		break
+	except socket.error:
+		pass
+
 ConnInterestedClient.setblocking(0)
-print ('Connection from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
+
 while True:
 	try:
 		data = ConnInterestedClient.recv(SOCKET_BUFFER_SIZE)
