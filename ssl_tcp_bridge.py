@@ -24,29 +24,39 @@ for Counter in range(MaxNumOfConnections):
 
 # ALGORITHM ------------------------------------------------------------------------------------------ #
 
+# Make non-bloking
+LocalClient.setblocking(0)
 #To target server
 print('Connecting to ' + TargetServer[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(TargetServer[SOCKET_TUPLE_INDEX_PORT]))
-if LocalClient.connect_ex(TargetServer) != 0:
-	print('Connection error')
-else:
-	print('Connection successful')
-	# Make non-bloking
-	LocalClient.setblocking(0)
-	# Send data
-	message = 'Request!\r'
-	print('Sending: ' + message)
-	print('Sent ' + str(LocalClient.send(message)) + ' bytes!')
-	# Look for the response
-	while True:
-		try:
-			data = LocalClient.recv(SOCKET_BUFFER_SIZE)
-			print('Received ' + str(len(data)) + ' bytes: ' + data.decode("utf-8"))
-			break
-		except socket.error:
-			pass
+while True:
+	try:
+		LocalClient.connect(TargetServer)
+		print('Connection successful')
+		break
+	except socket.error:
+		pass
+	
+# Send data
+message = 'Request!\r'
+print('Sending: ' + message)
+while True:
+	try:
+		print('Sent ' + str(LocalClient.send(message)) + ' bytes!')
+		break
+	except socket.error:
+		pass
 
-	print('Closing socket')
-	LocalClient.close()
+# Look for the response
+while True:
+	try:
+		data = LocalClient.recv(SOCKET_BUFFER_SIZE)
+		print('Received ' + str(len(data)) + ' bytes: ' + data.decode("utf-8"))
+		break
+	except socket.error:
+		pass
+
+print('Closing socket')
+LocalClient.close()
 
 #From interested client
 LocalHost.bind(LocalServer)
