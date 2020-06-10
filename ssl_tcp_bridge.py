@@ -13,7 +13,7 @@ LocalServer = ('localhost',30000)
 
 
 # OBJECTS -------------------------------------------------------------------------------------------- #
-ConnToServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)   #TODO: Stablish many connections
+LocalClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)   #TODO: Stablish many connections
 LocalHost = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 VecConnInterestedClients = [];
 for Counter in range(MAX_CONNECTIONS):
@@ -25,27 +25,27 @@ for Counter in range(MAX_CONNECTIONS):
 
 #To target server
 print('Connecting to ' + TargetServer[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(TargetServer[SOCKET_TUPLE_INDEX_PORT]))
-if ConnToServer.connect_ex(TargetServer) != 0:
+if LocalClient.connect_ex(TargetServer) != 0:
 	print('Connection error')
 else:
 	print('Connection successful')
 	# Make non-bloking
-	ConnToServer.setblocking(0)
+	LocalClient.setblocking(0)
 	# Send data
 	message = 'Request!\r'
 	print('Sending: ' + message)
-	print('Sent ' + str(ConnToServer.send(message)) + ' bytes!')
+	print('Sent ' + str(LocalClient.send(message)) + ' bytes!')
 	# Look for the response
 	while True:
 		try:
-			data = ConnToServer.recv(SOCKET_BUFFER_SIZE)
+			data = LocalClient.recv(SOCKET_BUFFER_SIZE)
 			print('Received ' + str(len(data)) + ' bytes: ' + data.decode("utf-8"))
 			break
 		except socket.error:
 			pass
 
 	print('Closing socket')
-	ConnToServer.close()
+	LocalClient.close()
 
 #From interested client
 LocalHost.bind(LocalServer)
