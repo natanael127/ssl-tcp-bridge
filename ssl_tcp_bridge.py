@@ -47,20 +47,15 @@ LocalHost.bind(LocalServer)
 LocalHost.listen(MAX_CONNECTIONS)
 print('Waiting for a connection to the local sever')
 ConnInterestedClient, InterestedClientAddress = LocalHost.accept()
-try:
-	print ('Connection from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
-
-	# Receive the data in small chunks and retransmit it
-	while True:
+ConnInterestedClient.setblocking(0)
+print ('Connection from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
+while True:
+	try:
 		data = ConnInterestedClient.recv(SOCKET_BUFFER_SIZE)
 		print('Received ' + str(len(data)) + ' bytes: ' + data.decode("utf-8"))
-		if data:
-			print ('Sending data back to the client')
-			ConnInterestedClient.send(data)
-		else:
-			print('No more data from client')
-			break
-		
-finally:
-	# Clean up the connection
-	ConnInterestedClient.close()
+		break
+	except socket.error:
+		pass
+print ('Sending data back to the client')
+ConnInterestedClient.send(data)
+ConnInterestedClient.close()
