@@ -11,9 +11,14 @@ MAX_CONNECTIONS = 7
 TargetServer = ('192.168.0.10', 50010) #TODO: receive parameters from command line
 LocalServer = ('localhost',30000)
 
+
 # OBJECTS -------------------------------------------------------------------------------------------- #
 ConnToServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)   #TODO: Stablish many connections
 LocalHost = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+VecConnInterestedClients = [];
+for Counter in range(MAX_CONNECTIONS):
+	VecConnInterestedClients.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+
 #TODO: work on IPv6
 
 # ALGORITHM ------------------------------------------------------------------------------------------ #
@@ -49,21 +54,21 @@ LocalHost.setblocking(0)
 print('Waiting for a connection to the local sever')
 while True:
 	try:
-		ConnInterestedClient, InterestedClientAddress = LocalHost.accept()
+		VecConnInterestedClients[0], InterestedClientAddress = LocalHost.accept()
 		print ('Connection from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
 		break
 	except socket.error:
 		pass
 
-ConnInterestedClient.setblocking(0)
+VecConnInterestedClients[0].setblocking(0)
 
 while True:
 	try:
-		data = ConnInterestedClient.recv(SOCKET_BUFFER_SIZE)
+		data = VecConnInterestedClients[0].recv(SOCKET_BUFFER_SIZE)
 		print('Received ' + str(len(data)) + ' bytes: ' + data.decode("utf-8"))
 		break
 	except socket.error:
 		pass
 print ('Sending data back to the client')
-ConnInterestedClient.send(data)
-ConnInterestedClient.close()
+VecConnInterestedClients[0].send(data)
+VecConnInterestedClients[0].close()
