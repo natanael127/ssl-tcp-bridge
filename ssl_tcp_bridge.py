@@ -10,7 +10,7 @@ SOCKET_BUFFER_SIZE = 65536
 # USER VARIABLES ------------------------------------------------------------------------------------- #
 TargetServer = ('192.168.0.10', 55195) #TODO: receive parameters from command line
 LocalServer = ('localhost',30000)
-MaxNumOfConnections = 7
+MaxNumOfConnections = 3
 
 
 # OBJECTS AND INTERNAL VARIABLES --------------------------------------------------------------------- #
@@ -40,9 +40,44 @@ LocalHost.listen(MaxNumOfConnections)
 LocalHost.setblocking(0)
 
 #Control to next connection
-NextFreeSocket = 0
+FreeSocket = 0
 #Main infinity loop
+while True:
+	#Verify for a pending incoming connection to accept (FreeSocket == MaxNumOfConnections means all are busy)
+	if FreeSocket < MaxNumOfConnections:
+		#Accepts connections
+		try:
+			VecConnFromInterestedClients[FreeSocket], InterestedClientAddress = LocalHost.accept()
+			print ('Connection ' + str(FreeSocket) + ' from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
+			#Finds the new next free socket and assign the connection flag
+			VecSocketIsConnected[FreeSocket] = True
+			for Counter in range(MaxNumOfConnections + 1):
+				FreeSocket = Counter
+				if Counter == MaxNumOfConnections:
+					#There are no more free sockets
+					break
+				if not VecSocketIsConnected[Counter]:
+					#Found a free socket
+					break
+		except socket.error:
+			pass
+	else:
+		#Refuse connections
+		try:
+			ConnRejectedClient, InterestedClientAddress = LocalHost.accept()
+			ConnRejectedClient.close()
+			print ('Rejecting from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
+		except socket.error:
+			pass
 
+	#Active sockets sweeping
+	#for Counter in range(MaxNumOfConnections):
+		#if VecSocketIsConnected[Counter]:
+			#Verify for messages or disconnection from 
+
+	
+
+#The program must never reach below here
 
 #To target server
 print('Connecting to ' + TargetServer[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(TargetServer[SOCKET_TUPLE_INDEX_PORT]))
