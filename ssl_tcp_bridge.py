@@ -1,6 +1,18 @@
 # DEPENDENCIES --------------------------------------------------------------------------------------- #
 import socket
 
+# PRIVATE FUNCTIONS ---------------------------------------------------------------------------------- #
+def findFreeSocket(VecConnected, VecConnecting, MaxConn):	
+	for Counter in range(MaxConn + 1):
+		FreeSocket = Counter
+		if Counter == MaxConn:
+			#There are no more free sockets
+			break
+		if (not VecConnected[Counter]) and (not VecConnecting[Counter]):
+			#Found a free socket
+			break
+	return FreeSocket
+
 # CONSTANT DEFINITIONS ------------------------------------------------------------------------------- #
 SOCKET_TUPLE_INDEX_ADDR = 0
 SOCKET_TUPLE_INDEX_PORT = 1
@@ -20,7 +32,6 @@ VecSocketIsConnected = []
 VecSocketIsConnecting = []
 
 #TODO: work on IPv6
-
 # ALGORITHM ------------------------------------------------------------------------------------------ #
 
 #Arrays initialization
@@ -61,15 +72,7 @@ while True:
 			print ('Connection #' + str(FreeSocket) + ' from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
 			#Schedules the respective connection to server
 			VecSocketIsConnecting[FreeSocket] = True
-			#Find the new next free socket
-			for Counter in range(MaxNumOfConnections + 1):
-				FreeSocket = Counter
-				if Counter == MaxNumOfConnections:
-					#There are no more free sockets
-					break
-				if (not VecSocketIsConnected[Counter]) and (not VecSocketIsConnecting[Counter]):
-					#Found a free socket
-					break
+			FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
 		except socket.error:
 			pass
 	else:
@@ -104,15 +107,7 @@ while True:
 						#Disconnection
 						VecConnFromInterestedClients[Counter].close()
 						VecSocketIsConnected[Counter] = False
-						#Find the new next free socket
-						for Counter in range(MaxNumOfConnections + 1):
-							FreeSocket = Counter
-							if Counter == MaxNumOfConnections:
-								#There are no more free sockets
-								break
-							if (not VecSocketIsConnected[Counter]) and (not VecSocketIsConnecting[Counter]):
-								#Found a free socket
-								break
+						FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
 					else:
 						#Data
 						print('Received ' + str(len(data)) + ' bytes from target server #' + str(Counter) + ': ' + data.decode("utf-8"))
