@@ -9,7 +9,7 @@ SOCKET_BUFFER_SIZE = 65536
 
 # USER VARIABLES ------------------------------------------------------------------------------------- #
 TargetServer = ('192.168.0.10', 50170) #TODO: receive parameters from command line
-LocalServer = ('localhost',20000)
+LocalServer = ('localhost',25000)
 MaxNumOfConnections = 3
 
 
@@ -48,21 +48,20 @@ try:
 except socket.error:
 	print('Failed to listen localhost socket. Exiting...')
 	exit()
-
 #Control to next connection
 FreeSocket = 0
 #Main infinity loop
 while True:
 	#Verify for a pending incoming connection to accept (FreeSocket == MaxNumOfConnections means all are busy)
 	if FreeSocket < MaxNumOfConnections:
+		
 		#Accepts connections
 		try:
 			VecConnFromInterestedClients[FreeSocket], InterestedClientAddress = LocalHost.accept()
 			print ('Connection #' + str(FreeSocket) + ' from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
 			#Schedules the respective connection to server
-			print('Connecting to ' + TargetServer[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(TargetServer[SOCKET_TUPLE_INDEX_PORT]))
 			VecSocketIsConnecting[FreeSocket] = True
-			#Finds the new next free socket
+			#Find the new next free socket
 			for Counter in range(MaxNumOfConnections + 1):
 				FreeSocket = Counter
 				if Counter == MaxNumOfConnections:
@@ -94,41 +93,29 @@ while True:
 			except socket.error:
 				pass
 
-	if (0):
-		#Active sockets sweeping
+	#Active sockets sweeping
+	if (1):
 		for Counter in range(MaxNumOfConnections):
 			if VecSocketIsConnected[Counter]:
-				#Check for messages or disconnection from target server
-				data = bytearray(0)
+				#Checks the target server
 				try:
 					data = VecConnToTargetServer[Counter].recv(SOCKET_BUFFER_SIZE)
-					if len(data) == 0:	#Disconnection
-						VecConnToTargetServer[Counter].close()
+					if len(data) == 0:
+						#Disconnection
 						VecConnFromInterestedClients[Counter].close()
 						VecSocketIsConnected[Counter] = False
-					else:			#Message
-						while True: #TODO: Unblock it
-							try:
-								VecConnFromInterestedClients[Counter].send(data)
+						#Find the new next free socket
+						for Counter in range(MaxNumOfConnections + 1):
+							FreeSocket = Counter
+							if Counter == MaxNumOfConnections:
+								#There are no more free sockets
 								break
-							except socket.error:
-								pass
+							if (not VecSocketIsConnected[Counter]) and (not VecSocketIsConnecting[Counter]):
+								#Found a free socket
+								break
+					else:
+						#Data
+						print('Received ' + str(len(data)) + ' bytes from target server #' + str(Counter) + ': ' + data.decode("utf-8"))
 				except socket.error:
 					pass
-				#Check for messages or disconnection from interested clients
-				data = bytearray(0)
-				try:
-					data = VecConnFromInterestedClients[Counter].recv(SOCKET_BUFFER_SIZE)
-					if len(data) == 0:	#Disconnection
-						VecConnToTargetServer[Counter].close()
-						VecConnFromInterestedClients[Counter].close()
-						VecSocketIsConnected[Counter] = False
-					else:			#Message
-						while True: #TODO: Unblock it
-							try:
-								VecConnToTargetServer[Counter].send(data)
-								break
-							except socket.error:
-								pass
-				except socket.error:
-					pass
+				#Checks the target server
