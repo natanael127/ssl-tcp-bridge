@@ -17,6 +17,7 @@ MaxNumOfConnections = 3
 VecConnFromInterestedClients = []
 VecConnToTargetServer = []
 VecSocketIsConnected = []
+VecSocketIsConnecting = []
 
 #TODO: work on IPv6
 
@@ -32,6 +33,7 @@ for Counter in range(MaxNumOfConnections):
 	VecConnToTargetServer[Counter].setblocking(0)
 	#Initializes the control flag of connections
 	VecSocketIsConnected.append(False)
+	VecSocketIsConnecting.append(False)
 
 #Local host initialization
 LocalHost = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -56,24 +58,26 @@ while True:
 		#Accepts connections
 		try:
 			VecConnFromInterestedClients[FreeSocket], InterestedClientAddress = LocalHost.accept()
-			print ('Connection ' + str(FreeSocket) + ' from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
+			print ('Connection #' + str(FreeSocket) + ' from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
 			#Make the respective connection to server
 			print('Connecting to ' + TargetServer[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(TargetServer[SOCKET_TUPLE_INDEX_PORT]))
+			VecSocketIsConnecting[FreeSocket] = True
 			while True:    #TODO: Unblock it
 				try:
 					VecConnToTargetServer[FreeSocket].connect(TargetServer)
-					print('Connection to server successful')
+					VecSocketIsConnected[FreeSocket] = True
+					VecSocketIsConnecting[FreeSocket] = False
+					print('Mirror connection #' + str(FreeSocket))
 					break
 				except socket.error:
 					pass
-			#Finds the new next free socket and assign the connection flag
-			VecSocketIsConnected[FreeSocket] = True
+			#Finds the new next free socket
 			for Counter in range(MaxNumOfConnections + 1):
 				FreeSocket = Counter
 				if Counter == MaxNumOfConnections:
 					#There are no more free sockets
 					break
-				if not VecSocketIsConnected[Counter]:
+				if (not VecSocketIsConnected[Counter]) and (not VecSocketIsConnecting[Counter]):
 					#Found a free socket
 					break
 		except socket.error:
@@ -87,40 +91,41 @@ while True:
 		except socket.error:
 			pass
 
-	#Active sockets sweeping
-	for Counter in range(MaxNumOfConnections):
-		if VecSocketIsConnected[Counter]:
-			#Check for messages or disconnection from target server
-			data = bytearray(0)
-			try:
-				data = VecConnToTargetServer[Counter].recv(SOCKET_BUFFER_SIZE)
-				if len(data) == 0:	#Disconnection
-					VecConnToTargetServer[Counter].close()
-					VecConnFromInterestedClients[Counter].close()
-					VecSocketIsConnected[Counter] = False
-				else:			#Message
-					while True: #TODO: Unblock it
-						try:
-							VecConnFromInterestedClients[Counter].send(data)
-							break
-						except socket.error:
-							pass
-			except socket.error:
-				pass
-			#Check for messages or disconnection from interested clients
-			data = bytearray(0)
-			try:
-				data = VecConnFromInterestedClients[Counter].recv(SOCKET_BUFFER_SIZE)
-				if len(data) == 0:	#Disconnection
-					VecConnToTargetServer[Counter].close()
-					VecConnFromInterestedClients[Counter].close()
-					VecSocketIsConnected[Counter] = False
-				else:			#Message
-					while True: #TODO: Unblock it
-						try:
-							VecConnToTargetServer[Counter].send(data)
-							break
-						except socket.error:
-							pass
-			except socket.error:
-				pass
+	if (0):
+		#Active sockets sweeping
+		for Counter in range(MaxNumOfConnections):
+			if VecSocketIsConnected[Counter]:
+				#Check for messages or disconnection from target server
+				data = bytearray(0)
+				try:
+					data = VecConnToTargetServer[Counter].recv(SOCKET_BUFFER_SIZE)
+					if len(data) == 0:	#Disconnection
+						VecConnToTargetServer[Counter].close()
+						VecConnFromInterestedClients[Counter].close()
+						VecSocketIsConnected[Counter] = False
+					else:			#Message
+						while True: #TODO: Unblock it
+							try:
+								VecConnFromInterestedClients[Counter].send(data)
+								break
+							except socket.error:
+								pass
+				except socket.error:
+					pass
+				#Check for messages or disconnection from interested clients
+				data = bytearray(0)
+				try:
+					data = VecConnFromInterestedClients[Counter].recv(SOCKET_BUFFER_SIZE)
+					if len(data) == 0:	#Disconnection
+						VecConnToTargetServer[Counter].close()
+						VecConnFromInterestedClients[Counter].close()
+						VecSocketIsConnected[Counter] = False
+					else:			#Message
+						while True: #TODO: Unblock it
+							try:
+								VecConnToTargetServer[Counter].send(data)
+								break
+							except socket.error:
+								pass
+				except socket.error:
+					pass
