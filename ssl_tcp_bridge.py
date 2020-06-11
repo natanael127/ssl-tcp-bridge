@@ -59,18 +59,9 @@ while True:
 		try:
 			VecConnFromInterestedClients[FreeSocket], InterestedClientAddress = LocalHost.accept()
 			print ('Connection #' + str(FreeSocket) + ' from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
-			#Make the respective connection to server
+			#Schedules the respective connection to server
 			print('Connecting to ' + TargetServer[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(TargetServer[SOCKET_TUPLE_INDEX_PORT]))
 			VecSocketIsConnecting[FreeSocket] = True
-			while True:    #TODO: Unblock it
-				try:
-					VecConnToTargetServer[FreeSocket].connect(TargetServer)
-					VecSocketIsConnected[FreeSocket] = True
-					VecSocketIsConnecting[FreeSocket] = False
-					print('Mirror connection #' + str(FreeSocket))
-					break
-				except socket.error:
-					pass
 			#Finds the new next free socket
 			for Counter in range(MaxNumOfConnections + 1):
 				FreeSocket = Counter
@@ -90,6 +81,18 @@ while True:
 			print ('Rejecting from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
 		except socket.error:
 			pass
+
+	#Connecting sockets sweeping
+	for Counter in range(MaxNumOfConnections):
+		if VecSocketIsConnecting[Counter]:
+			try:
+				VecConnToTargetServer[Counter].connect(TargetServer)
+				VecSocketIsConnected[Counter] = True
+				VecSocketIsConnecting[Counter] = False
+				print('Mirror connection #' + str(Counter) + ' done!')
+				break
+			except socket.error:
+				pass
 
 	if (0):
 		#Active sockets sweeping
