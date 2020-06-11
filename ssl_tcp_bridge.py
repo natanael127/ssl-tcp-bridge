@@ -8,7 +8,7 @@ SOCKET_BUFFER_SIZE = 65536
 
 
 # USER VARIABLES ------------------------------------------------------------------------------------- #
-TargetServer = ('192.168.0.10', 49988) #TODO: receive parameters from command line
+TargetServer = ('192.168.0.10', 50170) #TODO: receive parameters from command line
 LocalServer = ('localhost',20000)
 MaxNumOfConnections = 3
 
@@ -35,9 +35,17 @@ for Counter in range(MaxNumOfConnections):
 
 #Local host initialization
 LocalHost = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-LocalHost.bind(LocalServer) #TODO: Handle errors
-LocalHost.listen(MaxNumOfConnections)
 LocalHost.setblocking(0)
+try:
+	LocalHost.bind(LocalServer)
+except socket.error:
+	print('Failed to bind localhost socket. Exiting...')
+	exit()
+try:
+	LocalHost.listen(MaxNumOfConnections)
+except socket.error:
+	print('Failed to listen localhost socket. Exiting...')
+	exit()
 
 #Control to next connection
 FreeSocket = 0
