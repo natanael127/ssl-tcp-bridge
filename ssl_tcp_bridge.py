@@ -21,7 +21,7 @@ SOCKET_BUFFER_SIZE = 65536
 
 # USER VARIABLES ------------------------------------------------------------------------------------- #
 TargetServer = ('192.168.0.10', 50593) #TODO: receive parameters from command line
-LocalServer = ('localhost',25000)
+LocalServer = ('localhost',30000)
 MaxNumOfConnections = 3
 
 
@@ -117,3 +117,18 @@ while True:
 				except socket.error:
 					pass
 				#Checks the interested client
+				try:
+					data = VecConnFromInterestedClients[Counter].recv(SOCKET_BUFFER_SIZE)
+					if len(data) == 0:
+						#Disconnection
+						VecConnFromInterestedClients[Counter].detach()
+						VecConnFromInterestedClients[Counter] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+						VecConnToTargetServer[Counter].close()
+						VecSocketIsConnected[Counter] = False
+						FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
+						print('Interested client #' + str(Counter) + ' disconnected and free socket is #' + str(FreeSocket))
+					else:
+						#Data
+						print('Received ' + str(len(data)) + ' bytes from interested client #' + str(Counter) + ': ' + data.decode("utf-8"))
+				except socket.error:
+					pass
