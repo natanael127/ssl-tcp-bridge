@@ -14,7 +14,6 @@ MaxNumOfConnections = 7
 
 
 # OBJECTS AND INTERNAL VARIABLES --------------------------------------------------------------------- #
-LocalHost = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 VecConnFromInterestedClients = []
 VecConnToTargetServer = []
 VecSocketIsConnected = []
@@ -34,8 +33,17 @@ for Counter in range(MaxNumOfConnections):
 	#Initializes the control flag of connections
 	VecSocketIsConnected.append(False)
 
-# Make non-bloking
-VecConnToTargetServer[0].setblocking(0)
+#Local host initialization
+LocalHost = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+LocalHost.bind(LocalServer) #TODO: Handle errors
+LocalHost.listen(MaxNumOfConnections)
+LocalHost.setblocking(0)
+
+#Control to next connection
+NextFreeSocket = 0
+#Main infinity loop
+
+
 #To target server
 print('Connecting to ' + TargetServer[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(TargetServer[SOCKET_TUPLE_INDEX_PORT]))
 while True:
@@ -68,9 +76,6 @@ print('Closing socket')
 VecConnToTargetServer[0].close()
 
 #From interested client
-LocalHost.bind(LocalServer) #TODO: Handle errors
-LocalHost.listen(MaxNumOfConnections)
-LocalHost.setblocking(0)
 print('Waiting for a connection to the local sever')
 while True:
 	try:
