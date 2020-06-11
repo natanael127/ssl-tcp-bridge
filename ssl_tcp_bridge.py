@@ -14,7 +14,6 @@ MaxNumOfConnections = 7
 
 
 # OBJECTS AND INTERNAL VARIABLES --------------------------------------------------------------------- #
-LocalClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)   #TODO: Stablish many connections
 LocalHost = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 VecConnFromInterestedClients = []
 VecConnToTargetServer = []
@@ -36,12 +35,12 @@ for Counter in range(MaxNumOfConnections):
 	VecSocketIsConnected.append(False)
 
 # Make non-bloking
-LocalClient.setblocking(0)
+VecConnToTargetServer[0].setblocking(0)
 #To target server
 print('Connecting to ' + TargetServer[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(TargetServer[SOCKET_TUPLE_INDEX_PORT]))
 while True:
 	try:
-		LocalClient.connect(TargetServer)
+		VecConnToTargetServer[0].connect(TargetServer)
 		print('Connection successful')
 		break
 	except socket.error:
@@ -49,10 +48,9 @@ while True:
 	
 # Send data
 message = 'Request!\r'
-print('Sending: ' + message)
 while True:
 	try:
-		print('Sent ' + str(LocalClient.send(message)) + ' bytes!')
+		print('Sent ' + str(VecConnToTargetServer[0].send(message)) + ' bytes: ' + message)
 		break
 	except socket.error:
 		pass
@@ -60,14 +58,14 @@ while True:
 # Look for the response
 while True:
 	try:
-		data = LocalClient.recv(SOCKET_BUFFER_SIZE)
+		data = VecConnToTargetServer[0].recv(SOCKET_BUFFER_SIZE)
 		print('Received ' + str(len(data)) + ' bytes: ' + data.decode("utf-8"))
 		break
 	except socket.error:
 		pass
 
 print('Closing socket')
-LocalClient.close()
+VecConnToTargetServer[0].close()
 
 #From interested client
 LocalHost.bind(LocalServer) #TODO: Handle errors
