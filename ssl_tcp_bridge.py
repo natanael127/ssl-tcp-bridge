@@ -1,6 +1,18 @@
 # DEPENDENCIES --------------------------------------------------------------------------------------- #
 import socket
 
+# PRIVATE FUNCTIONS ---------------------------------------------------------------------------------- #
+def findFreeSocket(VecConnected, VecConnecting, MaxConn):	
+	for Counter in range(MaxConn + 1):
+		FreeSocket = Counter
+		if Counter == MaxConn:
+			#There are no more free sockets
+			break
+		if (not VecConnected[Counter]) and (not VecConnecting[Counter]):
+			#Found a free socket
+			break
+	return FreeSocket
+
 # CONSTANT DEFINITIONS ------------------------------------------------------------------------------- #
 SOCKET_TUPLE_INDEX_ADDR = 0
 SOCKET_TUPLE_INDEX_PORT = 1
@@ -8,8 +20,8 @@ SOCKET_BUFFER_SIZE = 65536
 
 
 # USER VARIABLES ------------------------------------------------------------------------------------- #
-TargetServer = ('192.168.0.10', 49988) #TODO: receive parameters from command line
-LocalServer = ('localhost',20000)
+TargetServer = ('192.168.0.10', 63119) #TODO: receive parameters from command line
+LocalServer = ('localhost',30000)
 MaxNumOfConnections = 3
 
 
@@ -17,9 +29,11 @@ MaxNumOfConnections = 3
 VecConnFromInterestedClients = []
 VecConnToTargetServer = []
 VecSocketIsConnected = []
+VecSocketIsConnecting = []
+ListSendToTargetServer = []
+ListSendToInterestedClients = []
 
 #TODO: work on IPv6
-
 # ALGORITHM ------------------------------------------------------------------------------------------ #
 
 #Arrays initialization
@@ -32,42 +46,35 @@ for Counter in range(MaxNumOfConnections):
 	VecConnToTargetServer[Counter].setblocking(0)
 	#Initializes the control flag of connections
 	VecSocketIsConnected.append(False)
+	VecSocketIsConnecting.append(False)
 
 #Local host initialization
 LocalHost = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-LocalHost.bind(LocalServer) #TODO: Handle errors
-LocalHost.listen(MaxNumOfConnections)
 LocalHost.setblocking(0)
-
+try:
+	LocalHost.bind(LocalServer)
+except socket.error:
+	print('Failed to bind localhost socket. Exiting...')
+	exit()
+try:
+	LocalHost.listen(MaxNumOfConnections)
+except socket.error:
+	print('Failed to listen localhost socket. Exiting...')
+	exit()
 #Control to next connection
 FreeSocket = 0
 #Main infinity loop
 while True:
 	#Verify for a pending incoming connection to accept (FreeSocket == MaxNumOfConnections means all are busy)
 	if FreeSocket < MaxNumOfConnections:
+		
 		#Accepts connections
 		try:
 			VecConnFromInterestedClients[FreeSocket], InterestedClientAddress = LocalHost.accept()
-			print ('Connection ' + str(FreeSocket) + ' from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
-			#Make the respective connection to server
-			print('Connecting to ' + TargetServer[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(TargetServer[SOCKET_TUPLE_INDEX_PORT]))
-			while True:    #TODO: Unblock it
-				try:
-					VecConnToTargetServer[FreeSocket].connect(TargetServer)
-					print('Connection to server successful')
-					break
-				except socket.error:
-					pass
-			#Finds the new next free socket and assign the connection flag
-			VecSocketIsConnected[FreeSocket] = True
-			for Counter in range(MaxNumOfConnections + 1):
-				FreeSocket = Counter
-				if Counter == MaxNumOfConnections:
-					#There are no more free sockets
-					break
-				if not VecSocketIsConnected[Counter]:
-					#Found a free socket
-					break
+			print ('Connection #' + str(FreeSocket) + ' from ' + InterestedClientAddress[SOCKET_TUPLE_INDEX_ADDR] + ':' + str(InterestedClientAddress[SOCKET_TUPLE_INDEX_PORT]))
+			#Schedules the respective connection to server
+			VecSocketIsConnecting[FreeSocket] = True
+			FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
 		except socket.error:
 			pass
 	else:
@@ -79,40 +86,73 @@ while True:
 		except socket.error:
 			pass
 
+	#Connecting sockets sweeping
+	for Counter in range(MaxNumOfConnections):
+		if VecSocketIsConnecting[Counter]:
+			try:
+				VecConnToTargetServer[Counter].connect(TargetServer)
+				VecSocketIsConnected[Counter] = True
+				VecSocketIsConnecting[Counter] = False
+				print('Mirror connection #' + str(Counter) + ' done!')
+				break
+			except socket.error:
+				pass
+
 	#Active sockets sweeping
 	for Counter in range(MaxNumOfConnections):
 		if VecSocketIsConnected[Counter]:
-			#Check for messages or disconnection from target server
-			data = bytearray(0)
+			#Checks the target server
 			try:
 				data = VecConnToTargetServer[Counter].recv(SOCKET_BUFFER_SIZE)
-				if len(data) == 0:	#Disconnection
-					VecConnToTargetServer[Counter].close()
+				if len(data) == 0:
+					#Disconnection
+					VecConnToTargetServer[Counter].detach()
+					VecConnToTargetServer[Counter] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 					VecConnFromInterestedClients[Counter].close()
 					VecSocketIsConnected[Counter] = False
-				else:			#Message
-					while True: #TODO: Unblock it
-						try:
-							VecConnFromInterestedClients[Counter].send(data)
-							break
-						except socket.error:
-							pass
+					FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
+					print('Target server conn #' + str(Counter) + ' disconnected and free socket is #' + str(FreeSocket))
+				else:
+					#Data
+					print('Received ' + str(len(data)) + ' bytes from target server #' + str(Counter) + ': ' + data.decode("utf-8"))
+					ListSendToInterestedClients.append((Counter, data))
 			except socket.error:
 				pass
-			#Check for messages or disconnection from interested clients
-			data = bytearray(0)
+			#Checks the interested client
 			try:
 				data = VecConnFromInterestedClients[Counter].recv(SOCKET_BUFFER_SIZE)
-				if len(data) == 0:	#Disconnection
+				if len(data) == 0:
+					#Disconnection
+					VecConnFromInterestedClients[Counter].detach()
+					VecConnFromInterestedClients[Counter] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 					VecConnToTargetServer[Counter].close()
-					VecConnFromInterestedClients[Counter].close()
 					VecSocketIsConnected[Counter] = False
-				else:			#Message
-					while True: #TODO: Unblock it
-						try:
-							VecConnToTargetServer[Counter].send(data)
-							break
-						except socket.error:
-							pass
+					FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
+					print('Interested client #' + str(Counter) + ' disconnected and free socket is #' + str(FreeSocket))
+				else:
+					#Data
+					print('Received ' + str(len(data)) + ' bytes from interested client #' + str(Counter) + ': ' + data.decode("utf-8"))
+					ListSendToTargetServer.append((Counter, data))
 			except socket.error:
 				pass
+
+	#Pending messages to forward to clients
+	Counter = 0
+	while Counter < len(ListSendToInterestedClients):
+		try:
+			VecConnFromInterestedClients[ListSendToInterestedClients[Counter][0]].send(ListSendToInterestedClients[Counter][1])
+			del ListSendToInterestedClients[Counter]
+		except socket.error:
+			Counter = Counter + 1
+			pass
+	
+
+	#Pending messages to forward to server
+	Counter = 0
+	while Counter < len(ListSendToTargetServer):
+		try:
+			VecConnToTargetServer[ListSendToTargetServer[Counter][0]].send(ListSendToTargetServer[Counter][1])
+			del ListSendToTargetServer[Counter]
+		except socket.error:
+			Counter = Counter + 1
+			pass
