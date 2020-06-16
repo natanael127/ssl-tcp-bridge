@@ -1,5 +1,6 @@
 # DEPENDENCIES --------------------------------------------------------------------------------------- #
 import socket
+from queue import Queue
 
 # PRIVATE FUNCTIONS ---------------------------------------------------------------------------------- #
 def findFreeSocket(VecConnected, VecConnecting, MaxConn):	
@@ -20,7 +21,7 @@ SOCKET_BUFFER_SIZE = 65536
 
 
 # USER VARIABLES ------------------------------------------------------------------------------------- #
-TargetServer = ('192.168.0.10', 50593) #TODO: receive parameters from command line
+TargetServer = ('192.168.0.10', 63119) #TODO: receive parameters from command line
 LocalServer = ('localhost',30000)
 MaxNumOfConnections = 3
 
@@ -30,6 +31,8 @@ VecConnFromInterestedClients = []
 VecConnToTargetServer = []
 VecSocketIsConnected = []
 VecSocketIsConnecting = []
+QueueSendToTargetServer = Queue()
+QueueSendToInterestedClient = Queue()
 
 #TODO: work on IPv6
 # ALGORITHM ------------------------------------------------------------------------------------------ #
@@ -97,38 +100,37 @@ while True:
 				pass
 
 	#Active sockets sweeping
-	if (1):
-		for Counter in range(MaxNumOfConnections):
-			if VecSocketIsConnected[Counter]:
-				#Checks the target server
-				try:
-					data = VecConnToTargetServer[Counter].recv(SOCKET_BUFFER_SIZE)
-					if len(data) == 0:
-						#Disconnection
-						VecConnToTargetServer[Counter].detach()
-						VecConnToTargetServer[Counter] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-						VecConnFromInterestedClients[Counter].close()
-						VecSocketIsConnected[Counter] = False
-						FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
-						print('Target server conn #' + str(Counter) + ' disconnected and free socket is #' + str(FreeSocket))
-					else:
-						#Data
-						print('Received ' + str(len(data)) + ' bytes from target server #' + str(Counter) + ': ' + data.decode("utf-8"))
-				except socket.error:
-					pass
-				#Checks the interested client
-				try:
-					data = VecConnFromInterestedClients[Counter].recv(SOCKET_BUFFER_SIZE)
-					if len(data) == 0:
-						#Disconnection
-						VecConnFromInterestedClients[Counter].detach()
-						VecConnFromInterestedClients[Counter] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-						VecConnToTargetServer[Counter].close()
-						VecSocketIsConnected[Counter] = False
-						FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
-						print('Interested client #' + str(Counter) + ' disconnected and free socket is #' + str(FreeSocket))
-					else:
-						#Data
-						print('Received ' + str(len(data)) + ' bytes from interested client #' + str(Counter) + ': ' + data.decode("utf-8"))
-				except socket.error:
-					pass
+	for Counter in range(MaxNumOfConnections):
+		if VecSocketIsConnected[Counter]:
+			#Checks the target server
+			try:
+				data = VecConnToTargetServer[Counter].recv(SOCKET_BUFFER_SIZE)
+				if len(data) == 0:
+					#Disconnection
+					VecConnToTargetServer[Counter].detach()
+					VecConnToTargetServer[Counter] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					VecConnFromInterestedClients[Counter].close()
+					VecSocketIsConnected[Counter] = False
+					FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
+					print('Target server conn #' + str(Counter) + ' disconnected and free socket is #' + str(FreeSocket))
+				else:
+					#Data
+					print('Received ' + str(len(data)) + ' bytes from target server #' + str(Counter) + ': ' + data.decode("utf-8"))
+			except socket.error:
+				pass
+			#Checks the interested client
+			try:
+				data = VecConnFromInterestedClients[Counter].recv(SOCKET_BUFFER_SIZE)
+				if len(data) == 0:
+					#Disconnection
+					VecConnFromInterestedClients[Counter].detach()
+					VecConnFromInterestedClients[Counter] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					VecConnToTargetServer[Counter].close()
+					VecSocketIsConnected[Counter] = False
+					FreeSocket = findFreeSocket(VecSocketIsConnected, VecSocketIsConnecting, MaxNumOfConnections)
+					print('Interested client #' + str(Counter) + ' disconnected and free socket is #' + str(FreeSocket))
+				else:
+					#Data
+					print('Received ' + str(len(data)) + ' bytes from interested client #' + str(Counter) + ': ' + data.decode("utf-8"))
+			except socket.error:
+				pass
