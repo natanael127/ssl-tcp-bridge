@@ -1,6 +1,5 @@
 # DEPENDENCIES --------------------------------------------------------------------------------------- #
 import socket
-from queue import Queue
 
 # PRIVATE FUNCTIONS ---------------------------------------------------------------------------------- #
 def findFreeSocket(VecConnected, VecConnecting, MaxConn):	
@@ -31,8 +30,8 @@ VecConnFromInterestedClients = []
 VecConnToTargetServer = []
 VecSocketIsConnected = []
 VecSocketIsConnecting = []
-QueueSendToTargetServer = Queue()
-QueueSendToInterestedClient = Queue()
+ListSendToTargetServer = []
+ListSendToInterestedClients = []
 
 #TODO: work on IPv6
 # ALGORITHM ------------------------------------------------------------------------------------------ #
@@ -116,6 +115,7 @@ while True:
 				else:
 					#Data
 					print('Received ' + str(len(data)) + ' bytes from target server #' + str(Counter) + ': ' + data.decode("utf-8"))
+					ListSendToInterestedClients.append((Counter, data))
 			except socket.error:
 				pass
 			#Checks the interested client
@@ -132,5 +132,27 @@ while True:
 				else:
 					#Data
 					print('Received ' + str(len(data)) + ' bytes from interested client #' + str(Counter) + ': ' + data.decode("utf-8"))
+					ListSendToTargetServer.append((Counter, data))
 			except socket.error:
 				pass
+
+	#Pending messages to forward to clients
+	Counter = 0
+	while Counter < len(ListSendToInterestedClients):
+		try:
+			VecConnFromInterestedClients[ListSendToInterestedClients[Counter][0]].send(ListSendToInterestedClients[Counter][1])
+			del ListSendToInterestedClients[Counter]
+		except socket.error:
+			Counter = Counter + 1
+			pass
+	
+
+	#Pending messages to forward to server
+	Counter = 0
+	while Counter < len(ListSendToTargetServer):
+		try:
+			VecConnToTargetServer[ListSendToTargetServer[Counter][0]].send(ListSendToTargetServer[Counter][1])
+			del ListSendToTargetServer[Counter]
+		except socket.error:
+			Counter = Counter + 1
+			pass
